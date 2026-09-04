@@ -208,7 +208,59 @@
   </div>
 </div>
 
-<!-- SCRIPT 1: Logica dell'Agent Virtuale (Sostituito per inserire uid nel link) -->
+<!-- SCRIPT 1: Gestione dell'ID Qualtrics e Tracking Globale -->
+<script>
+  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzDjpCzNVOBag47uzFnb8AH_rYQ-Vkz3J7xQY_5L3HkfyMqyoLVo4D_V3Bd3HBcVgqoow/exec";
+
+  // Recupera l'ID Qualtrics dall'URL (parametro ?uid=...)
+  const urlParams = new URLSearchParams(window.location.search);
+  var userId = urlParams.get('uid');
+
+  if (userId) {
+    localStorage.setItem('qualtrics_user_id', userId);
+  } else {
+    userId = localStorage.getItem('qualtrics_user_id') || 'ANONIMO_NO_ID';
+  }
+
+  // Genera o recupera il Session ID univoco
+  let sessionId = sessionStorage.getItem('site_session_id');
+  if (!sessionId) {
+    sessionId = 'sess_' + Math.random().toString(36).substr(2, 9);
+    sessionStorage.setItem('site_session_id', sessionId);
+  }
+
+  // Funzione per inviare i dati al Foglio Google
+  function sendToGoogleSheet(eventType, destination, details) {
+    const payload = {
+      user_id: userId,
+      event_type: eventType,
+      destination: destination,
+      details: details,
+      session_id: sessionId
+    };
+
+    fetch(GOOGLE_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).catch(err => console.error('Errore invio dati:', err));
+  }
+
+  // Tracciamento automatico dei click
+  document.addEventListener('click', function(event) {
+    const target = event.target.closest('a, button, input, [id]') || event.target;
+    const eventType = 'click';
+    const destination = target.href || target.action || window.location.pathname;
+    const tagInfo = target.tagName + (target.id ? '#' + target.id : '') + (target.className ? '.' + target.className.toString().split(' ').join('.') : '');
+    const textContent = target.innerText ? target.innerText.trim().substring(0, 40) : '';
+    const details = `${tagInfo} | Text: "${textContent}"`;
+
+    sendToGoogleSheet(eventType, destination, details);
+  });
+</script>
+
+<!-- SCRIPT 2: Logica Chat Agent SAM -->
 <script>
   const SURVEY_CODE = "CS4685LR";
 
@@ -243,7 +295,6 @@
     return text;
   }
 
-  // Rimuove qualsiasi link generato casualmente durante la conversazione
   function stripUnwantedLinks(text) {
     return text
       .replace(/\[([^\]]+)\]\(https?:\/\/[^\s)]+\)/gi, '$1')
@@ -283,7 +334,6 @@
     appendMessage('user', userText);
     userMsgCount++;
 
-    // Se siamo al 5° messaggio, instruiamo l'AI a rispondere in modo conclusivo senza porre domande
     const payloadMessages = history.map(m => ({ ...m }));
     if (userMsgCount === 5) {
       payloadMessages.push({
@@ -313,19 +363,15 @@
 
       const data = await res.json();
       
-      // Pulisce la risposta per evitare che l'AI inserisca link non autorizzati
       let reply = stripUnwantedLinks(data.reply || "Sorry, I didn't understand. Please try again!");
 
-      // --- CORREZIONE QUI ---
-      // Al 5° messaggio dell'utente inserisce l'unico link autorizzato, iniettando l'userId e formattando il testo.
+      // Al 5° messaggio genera il link dinamico verso lo store con l'ID dell'utente
       if (userMsgCount === 5) {
-        // userId è definito nello script di tracking qui sotto
         const uidParam = userId ? encodeURIComponent(userId) : 'ANONIMO_NO_ID';
         const finalStoreUrl = `https://try-code-source.github.io/my_virtual_store/?uid=${uidParam}`;
         
         reply += `\n\n---\n✅ You have reached the minimum number of messages. Use the code **\`${SURVEY_CODE}\`** to continue the survey.\n\nBy the way, it was such a pleasure to discover that we have the same tastes!😄\n\nIf you’re really intrigued by Abruzzo and want to see some of its most fascinating attractions, I recommend visiting this website: ${finalStoreUrl}`;
       }
-      // ----------------------
 
       history.push({ role: 'user', content: userText });
       history.push({ role: 'assistant', content: reply });
@@ -340,7 +386,6 @@
 
     loading = false;
     
-    // Ripristina l'input solo se non si è raggiunto il quinto messaggio
     if (userMsgCount < 5) {
       sendBtn.disabled = false;
       input.disabled = false;
@@ -349,67 +394,6 @@
       input.placeholder = "You have completed the maximum number of messages.";
     }
   }
-</script>
-
-<!-- SCRIPT 2: Tracking verso Google Sheets (Invariato, ma spostato userId a scope globale) -->
-<script>
-  // 1. URL della Web App di Google Apps Script
-  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzDjpCzNVOBag47uzFnb8AH_rYQ-Vkz3J7xQY_5L3HkfyMqyoLVo4D_V3Bd3HBcVgqoow/exec";
-
-  // --- CORREZIONE SCOPE ---
-  // Definisco userId con 'var' a livello globale così che sia accessibile anche dallo script 1
-  const urlParams = new URLSearchParams(window.location.search);
-  var userId = urlParams.get('uid');
-
-  if (userId) {
-    localStorage.setItem('qualtrics_user_id', userId);
-  } else {
-    userId = localStorage.getItem('qualtrics_user_id') || 'ANONIMO_NO_ID';
-  }
-  // -------------------------
-
-  // Genera un Session ID univoco per la sessione di navigazione sul sito
-  let sessionId = sessionStorage.getItem('site_session_id');
-  if (!sessionId) {
-    sessionId = 'sess_' + Math.random().toString(36).substr(2, 9);
-    sessionStorage.setItem('site_session_id', sessionId);
-  }
-
-  // 3. Funzione per inviare i dati al Foglio Google
-  function sendToGoogleSheet(eventType, destination, details) {
-    const payload = {
-      user_id: userId,
-      event_type: eventType,
-      destination: destination,
-      details: details,
-      session_id: sessionId
-    };
-
-    fetch(GOOGLE_SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    }).catch(err => console.error('Errore invio dati:', err));
-  }
-
-  // 4. Tracciamento automatico di ogni click sulla pagina
-  document.addEventListener('click', function(event) {
-    const target = event.target.closest('a, button, input, [id]') || event.target;
-    
-    // Tipo evento
-    const eventType = 'click';
-    
-    // Destinazione (se è un link prende l'URL 'href', altrimenti il tag o la pagina corrente)
-    const destination = target.href || target.action || window.location.pathname;
-    
-    // Dettagli sull'elemento cliccato (ID, classe e testo contenuto)
-    const tagInfo = target.tagName + (target.id ? '#' + target.id : '') + (target.className ? '.' + target.className.toString().split(' ').join('.') : '');
-    const textContent = target.innerText ? target.innerText.trim().substring(0, 40) : '';
-    const details = `${tagInfo} | Text: "${textContent}"`;
-
-    sendToGoogleSheet(eventType, destination, details);
-  });
 </script>
 
 </body>
