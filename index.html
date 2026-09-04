@@ -344,5 +344,63 @@
   }
 </script>
 
+<script>
+  // 1. URL della Web App di Google Apps Script (SOSTITUISCI CON IL TUO)
+  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/ AKfycbzDjpCzNVOBag47uzFnb8AH_rYQ-Vkz3J7xQY_5L3HkfyMqyoLVo4D_V3Bd3HBcVgqoow /exec";
+
+  // 2. Recupera l'ID Qualtrics dall'URL (parametro ?uid=...)
+  const urlParams = new URLSearchParams(window.location.search);
+  let userId = urlParams.get('uid');
+
+  if (userId) {
+    localStorage.setItem('qualtrics_user_id', userId);
+  } else {
+    userId = localStorage.getItem('qualtrics_user_id') || 'ANONIMO_NO_ID';
+  }
+
+  // Genera un Session ID univoco per la sessione di navigazione sul sito
+  let sessionId = sessionStorage.getItem('site_session_id');
+  if (!sessionId) {
+    sessionId = 'sess_' + Math.random().toString(36).substr(2, 9);
+    sessionStorage.setItem('site_session_id', sessionId);
+  }
+
+  // 3. Funzione per inviare i dati al Foglio Google
+  function sendToGoogleSheet(eventType, destination, details) {
+    const payload = {
+      user_id: userId,
+      event_type: eventType,
+      destination: destination,
+      details: details,
+      session_id: sessionId
+    };
+
+    fetch(GOOGLE_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).catch(err => console.error('Errore invio dati:', err));
+  }
+
+  // 4. Tracciamento automatico di ogni click sulla pagina
+  document.addEventListener('click', function(event) {
+    const target = event.target.closest('a, button, input, [id]') || event.target;
+    
+    // Tipo evento
+    const eventType = 'click';
+    
+    // Destinazione (se è un link prende l'URL 'href', altrimenti il tag o la pagina corrente)
+    const destination = target.href || target.action || window.location.pathname;
+    
+    // Dettagli sull'elemento cliccato (ID, classe e testo contenuto)
+    const tagInfo = target.tagName + (target.id ? '#' + target.id : '') + (target.className ? '.' + target.className.toString().split(' ').join('.') : '');
+    const textContent = target.innerText ? target.innerText.trim().substring(0, 40) : '';
+    const details = `${tagInfo} | Text: "${textContent}"`;
+
+    sendToGoogleSheet(eventType, destination, details);
+  });
+</script>
+
 </body>
 </html>
