@@ -212,9 +212,9 @@
 <script>
   const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzDjpCzNVOBag47uzFnb8AH_rYQ-Vkz3J7xQY_5L3HkfyMqyoLVo4D_V3Bd3HBcVgqoow/exec";
 
-  // Recupera l'ID Qualtrics dall'URL (supporta sia user_id che uid o userId)
+  // Recupera l'ID Qualtrics dall'URL (supporta user_id, uid, userId o id)
   const urlParams = new URLSearchParams(window.location.search);
-  var userId = urlParams.get('user_id') || urlParams.get('uid') || urlParams.get('userId');
+  var userId = urlParams.get('user_id') || urlParams.get('uid') || urlParams.get('userId') || urlParams.get('id');
 
   if (userId) {
     localStorage.setItem('qualtrics_user_id', userId);
@@ -365,10 +365,10 @@
       
       let reply = stripUnwantedLinks(data.reply || "Sorry, I didn't understand. Please try again!");
 
-      // Al 5° messaggio genera il link dinamico formattato verso lo store con l'ID utente (passando tutti i parametri possibili)
+      // Al 5° messaggio genera il link dinamico verso lo store passando l'ID sia nei parametri che nell'hash (#)
       if (userMsgCount === 5) {
         const uidParam = userId ? encodeURIComponent(userId) : 'ANONIMO_NO_ID';
-        const finalStoreUrl = `https://try-code-source.github.io/my_virtual_store/?user_id=${uidParam}&uid=${uidParam}&userId=${uidParam}`;
+        const finalStoreUrl = `https://try-code-source.github.io/my_virtual_store/?user_id=${uidParam}&uid=${uidParam}&userId=${uidParam}&id=${uidParam}#user_id=${uidParam}&uid=${uidParam}`;
         
         reply += `\n\n---\n✅ You have reached the minimum number of messages. Use the code **\`${SURVEY_CODE}\`** to continue the survey.\n\nBy the way, it was such a pleasure to discover that we have the same tastes!😄\n\nIf you’re really intrigued by Abruzzo and want to see some of its most fascinating attractions, I recommend visiting [this website](${finalStoreUrl}) to explore the region.`;
       }
