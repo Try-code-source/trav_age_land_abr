@@ -289,14 +289,14 @@
     const input = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
     const userText = text || input.value.trim();
-    if (!userText || loading || userMsgCount >= 5) return;
+    if (!userText || loading || userMsgCount >= 3) return;
 
     input.value = '';
     appendMessage('user', userText);
     userMsgCount++;
 
     const payloadMessages = history.map(m => ({ ...m }));
-    if (userMsgCount === 5) {
+    if (userMsgCount === 3) {
       payloadMessages.push({
         role: 'user',
         content: userText + " (IMPORTANT INSTRUCTION FOR THIS FINAL TURN: Answer directly and conclusively. Do NOT ask any follow-up question or offer further options, as this is the user's last message.)"
@@ -326,8 +326,8 @@
       
       let reply = stripUnwantedLinks(data.reply || "Sorry, I didn't understand. Please try again!");
 
-      // Al 5° messaggio genera il link dinamico verso lo store passando l'ID sia nei parametri che nell'hash (#)
-      if (userMsgCount === 5) {
+      // Al 3° messaggio genera il link dinamico verso lo store passando l'ID sia nei parametri che nell'hash (#)
+      if (userMsgCount === 3) {
         const uidParam = userId ? encodeURIComponent(userId) : 'ANONIMO_NO_ID';
         const finalStoreUrl = `https://try-code-source.github.io/my_virtual_store/?user_id=${uidParam}&uid=${uidParam}&userId=${uidParam}&id=${uidParam}#user_id=${uidParam}&uid=${uidParam}`;
         
